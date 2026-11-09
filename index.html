@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>¡Desbloquea el Cofre Dulce de Candy Crush!</title>
+
+  <!-- Fuentes oficiales estilo videojuego -->
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&family=Nunito:wght@800;900&display=swap" rel="stylesheet">
+
+  <!-- Librería de Confeti Dulce -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+  <!-- SDK Oficial de EmailJS v4 -->
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+  <script type="text/javascript">
+    (function() {
+      // Reemplaza con tu Public Key real de EmailJS
+      emailjs.init({
+        publicKey: "kAOUqaw4PiGVgf5a7",
+      });
+    })();
+  </script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* ============================================ */
+    /* CORTINA DE CARGA (SPLASH SCREEN PRELOADER)  */
+    /* ============================================ */
+    #loader-curtain {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: radial-gradient(circle at center, #ff80ab 0%, #ff2a74 50%, #5c1b69 100%);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      transition: opacity 0.8s ease, visibility 0.8s ease;
+    }
+
+    #loader-curtain.hide {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .loader-content {
+      text-align: center;
+      color: #ffffff;
+      animation: popLoader 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    @keyframes popLoader {
+      0% { transform: scale(0.5); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .loader-candy {
+      font-size: 85px;
+      display: inline-block;
+      animation: spinBounce 1.2s infinite alternate ease-in-out;
+      filter: drop-shadow(0 10px 15px rgba(0,0,0,0.3));
+    }
+
+    @keyframes spinBounce {
+      0% { transform: translateY(0) scale(1) rotate(-12deg); }
+      100% { transform: translateY(-22px) scale(1.15) rotate(12deg); }
+    }
+
+    .loader-title {
+      font-family: 'Fredoka', cursive;
+      font-size: 30px;
+      color: #ffe569;
+      text-shadow: 3px 3px 0 #ff0055, 0 0 15px rgba(255, 229, 105, 0.8);
+      margin: 18px 0 10px 0;
+      letter-spacing: 1px;
+    }
+
+    .loader-bar-bg {
+      width: 240px;
+      height: 20px;
+      background: rgba(255, 255, 255, 0.25);
+      border: 3px solid #ffffff;
+      border-radius: 20px;
+      margin: 0 auto;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    }
+
+    .loader-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #00e676, #ffe569);
+      border-radius: 15px;
+      animation: fillLoader 1.6s ease-in-out forwards;
+    }
+
+    @keyframes fillLoader {
+      0% { width: 0%; }
+      100% { width: 100%; }
+    }
+
+    /* ============================================ */
+    /* ESTILOS DEL CUERPO Y EFECTOS DE FONDO      */
+    /* ============================================ */
+    body {
+      min-height: 100vh;
+      font-family: 'Nunito', sans-serif;
+      background: radial-gradient(circle at center, #ff9bbd 0%, #f770a3 40%, #a855f7 100%);
+      background-attachment: fixed;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      overflow-x: hidden;
+      position: relative;
+      perspective: 1000px;
+    }
+
+    /* CARAMELOS CAYENDO EN SEGUNDO PLANO */
+    #candy-rain {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .falling-candy {
+      position: absolute;
+      top: -60px;
+      user-select: none;
+      animation: fall linear infinite, rotateCandy 4s ease-in-out infinite alternate;
+    }
+
+    @keyframes fall {
+      to { transform: translateY(105vh) rotate(360deg); }
+    }
+
+    @keyframes rotateCandy {
+      from { filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2)); }
+      to { filter: drop-shadow(0 12px 15px rgba(255,255,255,0.6)); }
+    }
+
+    /* BRILLOS MÁGICOS DEL CURSOR */
+    .cursor-sparkle {
+      position: fixed;
+      pointer-events: none;
+      z-index: 999;
+      font-size: 18px;
+      user-select: none;
+      animation: sparkleFade 0.8s forwards linear;
+    }
+
+    @keyframes sparkleFade {
+      0% { opacity: 1; transform: scale(1) translateY(0) rotate(0deg); }
+      100% { opacity: 0; transform: scale(0.2) translateY(-25px) rotate(180deg); }
+    }
+
+    /* ============================================ */
+    /* TARJETA PRINCIPAL Y SECCIONES INTERACTIVAS  */
+    /* ============================================ */
+    .card {
+      position: relative;
+      z-index: 2;
+      background: #ffffff;
+      border: 8px solid #ff2a74;
+      border-radius: 40px;
+      max-width: 500px;
+      width: 100%;
+      padding: 35px 28px;
+      box-shadow: 0 20px 0 #990033, 0 30px 50px rgba(0, 0, 0, 0.35);
+      text-align: center;
+      transition: transform 0.2s cubic-bezier(0.25, 1, 0.5, 1);
+      transform-style: preserve-3d;
+    }
+
+    /* SECCIÓN 1: HEADER & LOGO */
+    .level-badge {
+      display: inline-block;
+      background: linear-gradient(180deg, #ffe569 0%, #ff9000 100%);
+      color: #5c1b69;
+      font-family: 'Fredoka', cursive;
+      font-size: 14px;
+      padding: 6px 18px;
+      border-radius: 20px;
+      border: 3px solid #ffffff;
+      box-shadow: 0 4px 0 #cc6600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 12px;
+      animation: pulseBadge 1.5s infinite alternate;
+    }
+
+    @keyframes pulseBadge {
+      0% { transform: scale(1); }
+      100% { transform: scale(1.08); }
+    }
+
+    .candy-logo {
+      width: 140px;
+      height: 140px;
+      border-radius: 32px;
+      box-shadow: 0 12px 30px rgba(255, 42, 116, 0.45);
+      border: 5px solid #ffffff;
+      display: block;
+      margin: 0 auto 15px auto;
+      transition: transform 0.3s ease;
+      cursor: pointer;
+    }
+
+    .candy-logo:hover {
+      transform: scale(1.15) rotate(5deg);
+    }
+
+    /* SECCIÓN 2: TITULAR Y PROPUESTA */
+    .hero-title {
+      font-family: 'Fredoka', cursive;
+      font-size: 30px;
+      color: #ff2a74;
+      text-shadow: 3px 3px 0 #ffe569, 4px 4px 0 #cc0044;
+      margin-bottom: 10px;
+      line-height: 1.15;
+    }
+
+    .hero-subtitle {
+      font-size: 16px;
+      color: #4a154b;
+      font-weight: 800;
+      line-height: 1.4;
+      margin-bottom: 20px;
+    }
+
+    .progress-container {
+      background: #ffe5f0;
+      border: 3px solid #ff80ab;
+      border-radius: 20px;
+      height: 22px;
+      width: 100%;
+      margin-bottom: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 35%;
+      background: linear-gradient(90deg, #00e676, #00b0ff);
+      border-radius: 15px;
+      transition: width 0.4s ease;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+
+    .progress-text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 11px;
+      font-weight: 900;
+      color: #4a154b;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* SECCIÓN 3: FORMULARIO Y BOTÓN CON DESTELLO CONTINUO */
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    .input-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .input-icon {
+      position: absolute;
+      left: 18px;
+      font-size: 22px;
+      pointer-events: none;
+      transition: transform 0.2s ease;
+    }
+
+    input[type="email"] {
+      width: 100%;
+      padding: 18px 20px 18px 52px;
+      border: 4px solid #ff80ab;
+      border-radius: 50px;
+      font-size: 16px;
+      font-family: 'Nunito', sans-serif;
+      font-weight: 800;
+      color: #4a154b;
+      background: #fff8fc;
+      outline: none;
+      box-shadow: inset 0 4px 8px rgba(0,0,0,0.08);
+      transition: all 0.3s ease;
+    }
+
+    input[type="email"]:focus {
+      border-color: #00e676;
+      background: #ffffff;
+      box-shadow: 0 0 0 6px rgba(0, 230, 118, 0.3);
+      transform: scale(1.02);
+    }
+
+    .submit-btn {
+      width: 100%;
+      padding: 18px;
+      border: 4px solid #ffffff;
+      border-radius: 50px;
+      background: linear-gradient(180deg, #ff9000 0%, #ff0055 100%);
+      color: #ffffff;
+      font-family: 'Fredoka', cursive;
+      font-size: 24px;
+      letter-spacing: 1px;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.4);
+      cursor: pointer;
+      box-shadow: 0 8px 0 #a30036, 0 12px 25px rgba(255, 0, 85, 0.45);
+      transition: all 0.15s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Rayo de luz pasando sobre el botón */
+    .submit-btn::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 60%;
+      height: 100%;
+      background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.6), transparent);
+      animation: btnShimmer 2.5s infinite;
+    }
+
+    @keyframes btnShimmer {
+      0% { left: -100%; }
+      30% { left: 150%; }
+      100% { left: 150%; }
+    }
+
+    .submit-btn:hover {
+      transform: translateY(-4px) scale(1.03);
+      box-shadow: 0 12px 0 #a30036, 0 18px 30px rgba(255, 0, 85, 0.55);
+      background: linear-gradient(180deg, #ffa01a 0%, #ff1a66 100%);
+    }
+
+    .submit-btn:active {
+      transform: translateY(5px) scale(0.98);
+      box-shadow: 0 3px 0 #a30036, 0 5px 10px rgba(255, 0, 85, 0.4);
+    }
+
+    /* SECCIÓN 4: RECOMPENSAS QUE SE DESBLOQUEAN */
+    .rewards-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin: 22px 0;
+    }
+
+    .reward-card {
+      background: #fff0f5;
+      border: 3px solid #ffb6c1;
+      border-radius: 20px;
+      padding: 12px 8px;
+      text-align: center;
+      box-shadow: 0 5px 0 #ff80ab;
+      transition: all 0.25s ease;
+      cursor: pointer;
+    }
+
+    .reward-card:hover {
+      transform: translateY(-6px) rotate(6deg) scale(1.05);
+      background: #ffe569;
+      border-color: #ff9000;
+      box-shadow: 0 8px 0 #cc6600;
+    }
+
+    .reward-icon {
+      font-size: 28px;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .reward-title {
+      font-size: 12px;
+      font-weight: 900;
+      color: #4a154b;
+      text-transform: uppercase;
+    }
+
+    /* CONTENEDOR DE VIDEO DE GAMEPLAY */
+    .video-box {
+      margin-top: 20px;
+      border-radius: 24px;
+      overflow: hidden;
+      border: 4px solid #ff80ab;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+      background: #000;
+      position: relative;
+      padding-bottom: 56.25%; /* Relación de aspecto 16:9 */
+      height: 0;
+    }
+
+    .video-box iframe {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border: 0;
+    }
+
+    /* SECCIÓN 5: FOOTER DE SOPORTE */
+    #status-message {
+      margin-top: 15px;
+      font-size: 17px;
+      font-weight: 900;
+      min-height: 26px;
+    }
+
+    .footer-box {
+      margin-top: 15px;
+      padding-top: 15px;
+      border-top: 3px dashed #ffb6c1;
+      font-size: 13px;
+      color: #7b438a;
+      font-weight: 800;
+      line-height: 1.5;
+    }
+
+    .footer-box a {
+      color: #ff2a74;
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- CORTINA DULCE DE CARGA -->
+  <div id="loader-curtain">
+    <div class="loader-content">
+      <div class="loader-candy">🍭</div>
+      <h2 class="loader-title">¡PREPARANDO TUS DULCES...!</h2>
+      <div class="loader-bar-bg">
+        <div class="loader-bar-fill"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lluvia de Caramelos en segundo plano -->
+  <div id="candy-rain"></div>
+
+  <!-- TARJETA DEL FORMULARIO CON 5 SECCIONES -->
+  <div class="card" id="mainCard">
+
+    <!-- SECCIÓN 1: HEADER & LOGO INTERACTIVO -->
+    <div>
+      <span class="level-badge">⭐ ¡Nivel 1000 Desbloqueado!</span>
+      <img class="candy-logo" id="candyLogo" src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQojx3kz2hcA500fantwtnyPUitu1ZvQxEUvyEFeIf2tw&amp;s=10" alt="Candy Crush Logo">
+    </div>
+
+    <!-- SECCIÓN 2: OFERTA & TITULAR IMPACTANTE -->
+    <h1 class="hero-title">¡RECLAMA TU COFRE DULCE VIP! 🎁</h1>
+    <p class="hero-subtitle">Ingresa tu correo para recibir <strong>50 Lingotes de Oro</strong>, vidas infinitas y ofertas exclusivas cada semana.</p>
+
+    <!-- BARRA DE PROGRESO DE SUSCRIPCIÓN -->
+    <div class="progress-container">
+      <div class="progress-bar" id="progressBar"></div>
+      <span class="progress-text" id="progressText">Paso 1 de 2: Escribe tu Email</span>
+    </div>
+
+    <!-- SECCIÓN 3: FORMULARIO DE 1 CAMPO DE EMAIL -->
+    <form id="subscription-form">
+      <div class="form-group">
+        <div class="input-wrapper">
+          <span class="input-icon" id="emailIcon">✉️</span>
+          <input type="email" id="user_email" name="user_email" placeholder="Escribe tu correo dulce..." required>
+        </div>
+      </div>
+      <button type="submit" id="submit-btn" class="submit-btn">
+        🍬 ¡ABRIR COFRE DULCE! 🍭
+      </button>
+    </form>
+
+    <div id="status-message"></div>
+
+    <!-- SECCIÓN 4: RECOMPENSAS QUE SE DESBLOQUEAN -->
+    <div class="rewards-grid">
+      <div class="reward-card">
+        <span class="reward-icon">🏆</span>
+        <span class="reward-title">50 Lingotes</span>
+      </div>
+      <div class="reward-card">
+        <span class="reward-icon">💖</span>
+        <span class="reward-title">Vidas VIP</span>
+      </div>
+      <div class="reward-card">
+        <span class="reward-icon">💣</span>
+        <span class="reward-title">Bombas Color</span>
+      </div>
+    </div>
+
+    <!-- VIDEO DE GAMEPLAY EN VIVO -->
+    <div class="video-box">
+      <iframe 
+        src="https://www.youtube.com/embed/v5XZIWwTJ1I" 
+        title="Candy Crush Gameplay Video" 
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+        referrerpolicy="strict-origin-when-cross-origin"
+        loading="lazy"
+        allowfullscreen>
+      </iframe>
+    </div>
+
+    <!-- SECCIÓN 5: FOOTER Y SOPORTE -->
+    <div class="footer-box">
+      🔒 Tus datos están más protegidos que un caramelo envuelto.<br>
+      Soporte oficial a solo un clic en <a href="mailto:hola@gmail.c">hola@gmail.c</a><br>
+      <strong>King & Candy Crush Saga © 2026</strong>
+    </div>
+
+  </div>
+
+  <script>
+    // 0. CONTROL DE LA CORTINA DE CARGA
+    function hideLoaderCurtain() {
+      const curtain = document.getElementById('loader-curtain');
+      if (curtain) {
+        curtain.classList.add('hide');
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      setTimeout(hideLoaderCurtain, 1800);
+    }, { once: true });
+    setTimeout(hideLoaderCurtain, 5000);
+
+    // 1. RASTRO DE BRILLOS CON EL CURSOR (SPARKLE TRAIL)
+    const sparkles = ['✨', '⭐', '💫', '💖', '🍬'];
+    let lastSparkleTime = 0;
+
+    document.addEventListener('mousemove', function(e) {
+      const now = Date.now();
+      if (now - lastSparkleTime > 45) {
+        lastSparkleTime = now;
+        const sparkle = document.createElement('span');
+        sparkle.classList.add('cursor-sparkle');
+        sparkle.innerText = sparkles[Math.floor(Math.random() * sparkles.length)];
+        sparkle.style.left = e.clientX + 'px';
+        sparkle.style.top = e.clientY + 'px';
+        document.body.appendChild(sparkle);
+
+        setTimeout(() => sparkle.remove(), 800);
+      }
+    });
+
+    // 2. MOVIMIENTO SUTIL E IMPERCEBTIBLE EN 3D (DESPLAZAMIENTO MÍNIMO)
+    const card = document.getElementById('mainCard');
+    document.addEventListener('mousemove', function(e) {
+      // Inclinación reducida significativamente para ser sutil (dividiendo entre 220)
+      const xAxis = (window.innerWidth / 2 - e.clientX) / 220;
+      const yAxis = (window.innerHeight / 2 - e.clientY) / 220;
+      card.style.transform = `rotateY(${xAxis}deg) rotateX(${yAxis}deg)`;
+    });
+
+    document.addEventListener('mouseleave', function() {
+      card.style.transform = `rotateY(0deg) rotateX(0deg)`;
+    });
+
+    // 3. ANIMACIÓN DE CARAMELOS CAYENDO CONTINUAMENTE
+    const rainContainer = document.getElementById('candy-rain');
+    const candyEmojis = ['🍬', '🍭', '🧁', '🍩', '🌟', '🍇', '🍫', '💣'];
+
+    function spawnCandy() {
+      const candy = document.createElement('div');
+      candy.classList.add('falling-candy');
+      candy.innerText = candyEmojis[Math.floor(Math.random() * candyEmojis.length)];
+      candy.style.left = Math.random() * 100 + 'vw';
+      candy.style.animationDuration = (Math.random() * 2.5 + 3) + 's';
+      candy.style.fontSize = (Math.random() * 16 + 20) + 'px';
+      candy.style.opacity = Math.random() * 0.7 + 0.3;
+
+      rainContainer.appendChild(candy);
+      setTimeout(() => candy.remove(), 6000);
+    }
+    setInterval(spawnCandy, 300);
+
+    // 4. BARRA DE PROGRESO INTERACTIVA AL ESCRIBIR
+    const emailInput = document.getElementById('user_email');
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressText');
+    const emailIcon = document.getElementById('emailIcon');
+
+    emailInput.addEventListener('input', function() {
+      if (emailInput.value.length > 3 && emailInput.value.includes('@')) {
+        progressBar.style.width = '85%';
+        progressText.innerText = '¡Casi listo! Haz clic en el botón';
+        emailIcon.innerText = '✨';
+      } else if (emailInput.value.length > 0) {
+        progressBar.style.width = '55%';
+        progressText.innerText = 'Escribiendo correo...';
+        emailIcon.innerText = '✏️';
+      } else {
+        progressBar.style.width = '35%';
+        progressText.innerText = 'Paso 1 de 2: Escribe tu Email';
+        emailIcon.innerText = '✉️';
+      }
+    });
+
+    // 5. EFECTO AL HACER CLIC EN EL LOGO
+    document.getElementById('candyLogo').addEventListener('click', function() {
+      confetti({ particleCount: 30, spread: 60, origin: { y: 0.3 } });
+    });
+
+    // 6. ENVÍO DE FORMULARIO A EMAILJS
+    const form = document.getElementById('subscription-form');
+    const statusMsg = document.getElementById('status-message');
+    const submitBtn = document.getElementById('submit-btn');
+
+    form.addEventListener('submit', function(event) {
+      event.preventDefault();
+
+      submitBtn.disabled = true;
+      submitBtn.innerText = '🚀 ¡DESBLOQUEANDO RECOMPENSAS!...';
+      statusMsg.innerText = '';
+
+      const serviceID = 'service_591ulso';
+      const templateID = 'template_v71ny8b';
+
+      emailjs.sendForm(serviceID, templateID, this)
+        .then(function() {
+          progressBar.style.width = '100%';
+          progressText.innerText = '¡RECOMPENSA DESBLOQUEADA!';
+
+          confetti({
+            particleCount: 180,
+            spread: 100,
+            origin: { y: 0.5 },
+            colors: ['#ff2a74', '#ffe569', '#00e676', '#ff9000', '#a855f7']
+          });
+
+          statusMsg.style.color = '#00c853';
+          statusMsg.innerText = '🎉 ¡SWEET! Revisa tu bandeja de entrada para reclamar tus lingotes.';
+          form.reset();
+          submitBtn.disabled = false;
+          submitBtn.innerText = '🍬 ¡ABRIR COFRE DULCE! 🍭';
+        }, function(error) {
+          statusMsg.style.color = '#d50000';
+          statusMsg.innerText = '❌ Error al conectar. Intenta de nuevo.';
+          console.error('Error EmailJS:', error);
+          submitBtn.disabled = false;
+          submitBtn.innerText = '🍬 ¡ABRIR COFRE DULCE! 🍭';
+        });
+    });
+  </script>
+
+</body>
+</html>
